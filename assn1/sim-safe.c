@@ -116,7 +116,7 @@ sim_check_options(struct opt_odb_t *odb, int argc, char **argv)
 void
 sim_reg_stats(struct stat_sdb_t *sdb)
 {
-  stat_reg_counter(sdb, "sim_num_cond_branches",
+  stat_reg_counter(sdb, "sim_num_insn",
 		   "total number of instructions executed",
 		   &sim_num_insn, sim_num_insn, NULL);
   stat_reg_counter(sdb, "sim_num_refs",
