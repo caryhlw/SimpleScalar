@@ -71,8 +71,14 @@
  * errors, and the implementation is crafted for clarity rather than speed.
  */
 
-/* added */
+/*************************** added ***************************/
 static counter_t g_total_cond_branches;
+static counter_t g_total_uncond_branches;
+static counter_t g_total_floating_point_instructions;
+static counter_t g_total_store_instructions;
+static counter_t g_total_load_instructions;
+static counter_t g_total_immediate;
+
 
 /* simulated registers */
 static struct regs_t regs;
@@ -128,10 +134,36 @@ sim_reg_stats(struct stat_sdb_t *sdb)
  stat_reg_formula(sdb, "sim_inst_rate",
 		   "simulation speed (in insts/sec)",
 		   "sim_num_insn / sim_elapsed_time", NULL);
-
+		   
+/*** conditional branches ***/
 stat_reg_counter(sdb, "sim_num_cond_branches" /* label for printing */,"total conditional branches executed" /* description */, &g_total_cond_branches /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
 
 stat_reg_formula(sdb, "sim_cond_branch_freq", "relative frequency of conditional branches", "sim_num_cond_branches / sim_num_insn", NULL); 
+
+/*** unconditional branches ***/
+stat_reg_counter(sdb, "sim_num_uncond_branches" /* label for printing */,"total unconditional branches executed" /* description */, &g_total_uncond_branches /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
+
+stat_reg_formula(sdb, "sim_uncond_branch_freq", "relative frequency of unconditional branches", "sim_num_uncond_branches / sim_num_insn", NULL); 
+
+/*** floating point ***/
+stat_reg_counter(sdb, "sim_num_floating_point_instructions" /* label for printing */,"total floating point instructions executed" /* description */, &g_total_floating_point_instructions /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
+
+stat_reg_formula(sdb, "sim_floating_point_instrutions_freq", "relative frequency of floating point instructions", "sim_num_floating_point_instructions / sim_num_insn", NULL); 
+
+/*** store instructions ***/
+stat_reg_counter(sdb, "sim_num_store_instructions" /* label for printing */,"total store instructions executed" /* description */, &g_total_store_instructions /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
+
+stat_reg_formula(sdb, "sim_store_instrutions_freq", "relative frequency of store instructions", "sim_num_store_instructions / sim_num_insn", NULL); 
+
+/*** load instructions ***/
+stat_reg_counter(sdb, "sim_num_load_instructions" /* label for printing */,"total load instructions executed" /* description */, &g_total_load_instructions /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
+
+stat_reg_formula(sdb, "sim_load_instrutions_freq", "relative frequency of load instructions", "sim_num_load_instructions / sim_num_insn", NULL); 
+
+/*** immediate operand ***/
+stat_reg_counter(sdb, "sim_total_immediate_instructions" /* label for printing */,"total load instructions executed" /* description */, &g_total_immediate /* pointer to the counter */, 0 /* initial value for the counter */, NULL);
+
+stat_reg_formula(sdb, "sim_total_immediate_freq", "relative frequency of total immediate operand instructions", "sim_total_immediate_instructions / sim_num_insn", NULL); 
 
   ld_reg_stats(sdb);
   mem_reg_stats(mem, sdb);
@@ -337,10 +369,31 @@ sim_main(void)
 	  panic("attempted to execute a bogus opcode");
       }
 
-	/* added */
 
+/*** CONDITIONAL BRANCHES ***/
 if( MD_OP_FLAGS(op) & F_COND ) 
 g_total_cond_branches++; 
+
+/*** UNCONDITIONAL BRANCHES ***/
+if( MD_OP_FLAGS(op) & F_DIRJMP ) 
+g_total_uncond_branches++;
+
+/*** FLOATING POINT INSTRUCTIONS ***/
+if( MD_OP_FLAGS(op) & F_FCOMP ) 
+g_total_floating_point_instructions++;
+
+/*** STORE INSTRUCTIONS ***/
+if( MD_OP_FLAGS(op) & F_STORE ) 
+g_total_store_instructions++;
+
+/*** LOAD INSTRUCTIONS ***/
+if( MD_OP_FLAGS(op) & F_LOAD ) 
+g_total_load_instructions++;
+
+/*** INSTRUCTIONS WITH IMMEDIATE OPERANDS ***/
+if( MD_OP_FLAGS(op) & F_IMM ) 
+g_total_immediate++;
+
 
       if (fault != md_fault_none)
 	fatal("fault (%d) detected @ 0x%08p", fault, regs.regs_PC);
