@@ -79,6 +79,9 @@ static counter_t g_total_store_instructions;
 static counter_t g_total_load_instructions;
 static counter_t g_total_immediate;
 
+static int regOld=0;
+static int regNew=0;
+int* reg_count;
 
 /* simulated registers */
 static struct regs_t regs;
@@ -204,7 +207,11 @@ sim_aux_config(FILE *stream)		/* output stream */
 void
 sim_aux_stats(FILE *stream)		/* output stream */
 {
-  /* nada */
+  int i=0;
+for(i=0; i<32; i++)
+{ printf("regcount[%d] %d \n", i,reg_count[i]); 
+printf(" reg Value old[%d] %d \n" , i ,regOld);
+printf("reg Value new [%d] %d \n", i,regNew);
 }
 
 /* un-initialize simulator-specific state */
@@ -316,6 +323,7 @@ sim_uninit(void)
 void
 sim_main(void)
 {
+int dst_reg=0;
   md_inst_t inst;
   register md_addr_t addr;
   enum md_opcode op;
@@ -326,7 +334,7 @@ sim_main(void)
 
   /* set up initial default next PC */
   regs.regs_NPC = regs.regs_PC + sizeof(md_inst_t);
-
+reg_count=(int *) calloc(32,sizeof(reg_count));
 
   while (TRUE)
     {
@@ -350,12 +358,15 @@ sim_main(void)
 
       /* decode the instruction */
       MD_SET_OPCODE(op, inst);
+      
+if(dst_reg >=0 && dst_reg <32) regOld = regs.regs_R[dst_reg]; 
 
       /* execute the instruction */
       switch (op)
 	{
 #define DEFINST(OP,MSK,NAME,OPFORM,RES,FLAGS,O1,O2,I1,I2,I3)		\
 	case OP:							\
+          dst_reg=O1; \
           SYMCAT(OP,_IMPL);						\
           break;
 #define DEFLINK(OP,MSK,NAME,MASK,SHIFT)					\
@@ -369,7 +380,7 @@ sim_main(void)
 	  panic("attempted to execute a bogus opcode");
       }
 
-
+//ECE
 /*** CONDITIONAL BRANCHES ***/
 if( MD_OP_FLAGS(op) & F_COND ) 
 g_total_cond_branches++; 
@@ -394,7 +405,8 @@ g_total_load_instructions++;
 if( MD_OP_FLAGS(op) & F_IMM ) 
 g_total_immediate++;
 
-
+ if(dst_reg >=0 && dst_reg <32) regNew = regs.regs_R[dst_reg]; 
+ 
       if (fault != md_fault_none)
 	fatal("fault (%d) detected @ 0x%08p", fault, regs.regs_PC);
 
