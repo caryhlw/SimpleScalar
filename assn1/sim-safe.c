@@ -92,6 +92,18 @@ static counter_t sim_num_refs = 0;
 /* maximum number of inst's to execute */
 static unsigned int max_insts;
 
+static int bit_bucket[300] = { 0 };
+int PC_offset;
+int offset_bits;
+int max_bits = 0;
+void branch_offset (void)
+{
+	int PC_offset = (regs.regs_TPC - regs.regs_PC)/8;
+	if (PC_offset > 0) { offset_bits = floor(log(PC_offset)/log(2.0))+2; }
+	else { offset_bits = ceil(log(-PC_offset)/log(2.0))+1; }
+	if (offset_bits > max_bits) { max_bits = offset_bits; }
+	bit_bucket[offset_bits] = bit_bucket[offset_bits] + 1;
+}
 /* register simulator-specific options */
 void
 sim_reg_options(struct opt_odb_t *odb)
@@ -204,7 +216,15 @@ sim_aux_config(FILE *stream)		/* output stream */
 void
 sim_aux_stats(FILE *stream)		/* output stream */
 {
-  /* nada */
+  /* EECE 476 */ 
+  int i;
+  printf("Max bits:");
+  printf("%d", max_bits);
+	for (i = 0; i < 32; i++)
+  {
+  	printf("%d", bit_bucket[i]);
+  	printf("\n");
+  }
 }
 
 /* un-initialize simulator-specific state */
@@ -372,8 +392,10 @@ sim_main(void)
 
 /*** CONDITIONAL BRANCHES ***/
 if( MD_OP_FLAGS(op) & F_COND ) 
-g_total_cond_branches++; 
-
+{
+	g_total_cond_branches++; 
+	branch_offset();
+}
 /*** UNCONDITIONAL BRANCHES ***/
 if( MD_OP_FLAGS(op) & F_DIRJMP ) 
 g_total_uncond_branches++;

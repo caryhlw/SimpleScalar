@@ -347,7 +347,7 @@ extern unsigned int md_op2flags[];
 
 /* default target PC handling */
 #ifndef SET_TPC
-#define SET_TPC(PC)	(void)0
+#define SET_TPC(PC)	(regs.regs_TPC = (PC))
 #endif /* SET_TPC */
 
 #ifdef BYTES_BIG_ENDIAN
