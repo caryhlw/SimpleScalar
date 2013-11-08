@@ -513,10 +513,10 @@ void decode(void)
     // check for RAW hazard
     for ( i=0; i < 3; ++i ) { // for each potential source operand...
         if ( pI->src[i] != NULL ) {
-            if( pI->src[i]->donecycle > sim_cycle ) {
-                // src[i] has not written to register file this cycle or earlier
-		pI->stalled = 1;
-                return;
+            if( pI->src[i]->donecycle > sim_cycle )
+            {
+            	pI->stalled = 1;
+            	return;
             }
         }
     }
@@ -544,19 +544,30 @@ void execute()
     pI->stalled = 0;
     pI->status = EXECUTED;
 
+    /*EECE 476*/
+    if (MD_OP_FLAGS(pI->op ) & F_CTRL)
+    {
+     pI->donecycle = sim_cycle;
+    }
+
     g_piperegister[EX_MEM_REGISTER] = pI; // move to EX/MEM register
     g_piperegister[ID_EX_REGISTER] = NULL;
 }
 
 void memory()
 {
+
     inst_t *pI = g_piperegister[EX_MEM_REGISTER];
     if( g_piperegister[MEM_WB_REGISTER] != NULL )
         return; // stall
     if( pI == NULL )
         return; // bubble, nothing to do
-
     pI->status = MEMORY_STAGE_COMPLETED;
+    /*EECE 476*/
+	if( MD_OP_FLAGS(pI->op) & F_LOAD )
+	{
+	    pI->donecycle = sim_cycle;
+	}
     g_piperegister[MEM_WB_REGISTER] = pI; // move to MEM/WB register
     g_piperegister[EX_MEM_REGISTER] = NULL;
 }
