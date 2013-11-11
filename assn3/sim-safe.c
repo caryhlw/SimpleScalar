@@ -65,6 +65,9 @@
 #include "stats.h"
 #include "sim.h"
 
+static counter_t g_total_cond_branches = 0;
+static counter_t g_total_mispredictions = 0;
+
 /*
  * This file implements a functional simulator.  This functional simulator is
  * the simplest, most user-friendly simulator in the simplescalar tool set.
@@ -128,6 +131,18 @@ sim_reg_stats(struct stat_sdb_t *sdb)
 		   "sim_num_insn / sim_elapsed_time", NULL);
   ld_reg_stats(sdb);
   mem_reg_stats(mem, sdb);
+
+  stat_reg_counter(sdb, "sim_num_cond_branches",
+                                "total number of conditional branches executed",
+                                &g_total_cond_branches,
+                                 g_total_cond_branches, NULL);
+  stat_reg_counter(sdb, "sim_num_mispredict",
+                                "total number of conditional branches executed",
+                                &g_total_mispredictions,
+                                 g_total_mispredictions, NULL);
+  stat_reg_formula(sdb, "sim_pred_accuracy",
+                                "branch prediction accuracy",
+                   "1 - sim_num_mispredict / sim_num_cond_branches", NULL);
 }
 
 /* initialize the simulator */
@@ -273,6 +288,8 @@ sim_uninit(void)
 #define DFCC            (2+32+32)
 #define DTMP            (3+32+32)
 
+int bpred_pht[32768];
+
 /* start simulation, program loaded, processor precise state initialized */
 void
 sim_main(void)
@@ -351,6 +368,15 @@ sim_main(void)
 	    is_write = TRUE;
 	}
 
+      if ( MD_OP_FLAGS(op) & F_COND ) {
+         g_total_cond_branches++;
+         unsigned index = (regs.regs_PC >> 3) & ((1<<15)-1);
+         assert( index < 32768 );
+         int prediction = bpred_pht[index];
+         int actual_outcome = (regs.regs_NPC != (regs.regs_PC + sizeof(md_inst_t)));
+         if( prediction != actual_outcome ) g_total_mispredictions++;
+         bpred_pht[ index ] = actual_outcome;
+      }
 
       /* go to the next instruction */
       regs.regs_PC = regs.regs_NPC;
