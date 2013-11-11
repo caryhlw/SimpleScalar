@@ -288,7 +288,7 @@ sim_uninit(void)
 #define DFCC            (2+32+32)
 #define DTMP            (3+32+32)
 
-int bpred_pht[32768];
+int bpred_pht[262144];
 
 /* start simulation, program loaded, processor precise state initialized */
 void
@@ -370,8 +370,8 @@ sim_main(void)
 
       if ( MD_OP_FLAGS(op) & F_COND ) {
          g_total_cond_branches++;
-         unsigned index = (regs.regs_PC >> 3) & ((1<<15)-1);
-         assert( index < 32768 );
+         unsigned index = (regs.regs_PC >> 3) & ((1<<18)-1);
+         assert( index < 262144 );
          int prediction = bpred_pht[index];
          int actual_outcome = (regs.regs_NPC != (regs.regs_PC + sizeof(md_inst_t)));
          if( prediction != actual_outcome ) g_total_mispredictions++;
