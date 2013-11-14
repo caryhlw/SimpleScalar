@@ -68,6 +68,8 @@
 static counter_t g_total_cond_branches = 0;
 static counter_t g_total_mispredictions = 0;
 
+static int state = 0;
+
 /*
  * This file implements a functional simulator.  This functional simulator is
  * the simplest, most user-friendly simulator in the simplescalar tool set.
@@ -368,16 +370,29 @@ sim_main(void)
 	    is_write = TRUE;
 	}
 
-      if ( MD_OP_FLAGS(op) & F_COND ) {
+      if ( MD_OP_FLAGS(op) & F_COND )
+      {
          g_total_cond_branches++;
          unsigned index = (regs.regs_PC >> 3) & ((1<<18)-1);
          assert( index < 262144 );
          int prediction = bpred_pht[index];
          int actual_outcome = (regs.regs_NPC != (regs.regs_PC + sizeof(md_inst_t)));
-         if( prediction != actual_outcome ) g_total_mispredictions++;
-         bpred_pht[ index ] = actual_outcome;
-      }
+         if( prediction != actual_outcome )
+		 {
+        	 g_total_mispredictions++;
+        	 saturating_counter(0);
+		 }
+         else
+         {
+        	 saturating_counter(1);
+         }
 
+         if (state <= 1)
+        	 bpred_pht[ index ] = 0;
+         else
+        	 bpred_pht[ index ] = 1;
+//         bpred_pht[ index ] = actual_outcome;
+      }
       /* go to the next instruction */
       regs.regs_PC = regs.regs_NPC;
       regs.regs_NPC += sizeof(md_inst_t);
@@ -386,4 +401,35 @@ sim_main(void)
       if (max_insts && sim_num_insn >= max_insts)
 	return;
     }
+}
+
+/* Refs: slide-set 8, page 20 */
+void saturating_counter (int result)
+{
+	switch (state)
+	{
+	case 0:	//state 00
+		if (result == 1)
+			state = 1;
+		break;
+	case 1: //state 01
+		if (result == 1)
+			state = 2;
+		else
+			state = 0;
+		break;
+	case 2: //state 11
+		if (result == 1)
+			state = 3;
+		else
+			state = 1;
+		break;
+	case 3: //state 10
+		if (result == 0)
+			state = 2;
+		break;
+	default:
+		assert (1 < 0);
+		break;
+	}
 }
