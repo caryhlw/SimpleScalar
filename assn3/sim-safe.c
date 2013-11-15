@@ -290,7 +290,24 @@ sim_uninit(void)
 #define DFCC            (2+32+32)
 #define DTMP            (3+32+32)
 
-int bpred_pht[262144];
+int bpred_pht[32768];
+
+/* Refs: slide-set 8, page 20 */
+void saturating_counter (int result, int index)
+{
+	if (result)
+	{
+		if (bpred_pht[ index ] == 3)
+			return;
+		bpred_pht[ index ] = bpred_pht[ index ] + 1;
+	}
+	else
+	{
+		if (bpred_pht[ index ] == 0)
+			return;
+		bpred_pht[ index ] = bpred_pht[ index ] - 1;
+	}
+}
 
 /* start simulation, program loaded, processor precise state initialized */
 void
@@ -373,19 +390,19 @@ sim_main(void)
       if ( MD_OP_FLAGS(op) & F_COND )
       {
          g_total_cond_branches++;
-         unsigned index = (regs.regs_PC >> 3) & ((1<<18)-1);
-         assert( index < 262144 );
-         int prediction = bpred_pht[index];
+         unsigned index = (regs.regs_PC >> 3) & ((1<<15)-1);
+         assert( index < 32768 );
+         int state = bpred_pht[index];
+         int prediction;
+         if (state <= 1)
+        	 prediction = 0;
+         else
+        	 prediction = 1;
          int actual_outcome = (regs.regs_NPC != (regs.regs_PC + sizeof(md_inst_t)));
          if( prediction != actual_outcome )
         	 g_total_mispredictions++;
 
-    	 saturating_counter(actual_outcome);
-
-         if (state <= 1)
-        	 bpred_pht[ index ] = 0;
-         else
-        	 bpred_pht[ index ] = 1;
+    	 saturating_counter(actual_outcome, index);
       }
 
       /* go to the next instruction */
@@ -396,39 +413,4 @@ sim_main(void)
       if (max_insts && sim_num_insn >= max_insts)
 	return;
     }
-}
-
-/* Refs: slide-set 8, page 20 */
-void saturating_counter (int result)
-{
-	switch (state)
-	{
-	case 0:	//state 00
-		if (result)
-			state = 1;
-		else
-			state = 0;
-		break;
-	case 1: //state 01
-		if (result)
-			state = 2;
-		else
-			state = 0;
-		break;
-	case 2: //state 10
-		if (result)
-			state = 3;
-		else
-			state = 1;
-		break;
-	case 3: //state 11
-		if (result)
-			state = 3;
-		else
-			state = 2;
-		break;
-	default:
-		assert (1 < 0);
-		break;
-	}
 }
