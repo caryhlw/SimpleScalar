@@ -290,22 +290,27 @@ sim_uninit(void)
 #define DFCC            (2+32+32)
 #define DTMP            (3+32+32)
 
-int bpred_pht[32768];
+int bpred_pht_history[32768];
+int bpred_pht[4][32768];
 
 /* Refs: slide-set 8, page 20 */
-void saturating_counter (int result, int index)
+int saturating_counter (int state, int result, int index, int history)
 {
 	if (result)
 	{
-		if (bpred_pht[ index ] == 3)
-			return;
-		bpred_pht[ index ] = bpred_pht[ index ] + 1;
+		if (state == 3)
+			return state;
+		state++;
+		bpred_pht[history][ index ] = state;
+		return state;
 	}
 	else
 	{
-		if (bpred_pht[ index ] == 0)
-			return;
-		bpred_pht[ index ] = bpred_pht[ index ] - 1;
+		if (state == 0)
+			return state;
+		state--;
+		bpred_pht[history][ index ] = state;
+		return state;
 	}
 }
 
@@ -392,7 +397,8 @@ sim_main(void)
          g_total_cond_branches++;
          unsigned index = (regs.regs_PC >> 3) & ((1<<15)-1);
          assert( index < 32768 );
-         int state = bpred_pht[index];
+         int history= bpred_pht_history[index];
+         int state = bpred_pht[history][index];
          int prediction;
          if (state <= 1)
         	 prediction = 0;
@@ -402,7 +408,8 @@ sim_main(void)
          if( prediction != actual_outcome )
         	 g_total_mispredictions++;
 
-    	 saturating_counter(actual_outcome, index);
+         bpred_pht_history[index] = saturating_counter(state, actual_outcome, index, history);
+
       }
 
       /* go to the next instruction */
