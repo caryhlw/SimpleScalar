@@ -289,7 +289,8 @@ sim_uninit(void)
 #define DTMP            (3+32+32)
 
 int bpred_pht[32768];
-
+int bpred_pht_no[32768];
+int bpred_pht_yes[32768];
 /* start simulation, program loaded, processor precise state initialized */
 void
 sim_main(void)
@@ -372,10 +373,19 @@ sim_main(void)
          g_total_cond_branches++;
          unsigned index = (regs.regs_PC >> 3) & ((1<<15)-1);
          assert( index < 32768 );
-         int prediction = bpred_pht[index];
+         int history = bpred_pht[index];
+         int prediction;
+         if (history)
+        	 prediction = bpred_pht_yes[index];
+         else
+        	 prediction = bpred_pht_no[index];
          int actual_outcome = (regs.regs_NPC != (regs.regs_PC + sizeof(md_inst_t)));
          if( prediction != actual_outcome ) g_total_mispredictions++;
-         bpred_pht[ index ] = actual_outcome;
+         if (history)
+        	 bpred_pht_yes[index] = actual_outcome;
+         else
+        	 bpred_pht_no[index] = actual_outcome;
+         bpred_pht[index] = actual_outcome;
       }
 
       /* go to the next instruction */
