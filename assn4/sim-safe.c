@@ -304,6 +304,14 @@ void cache_access(struct cache *c, unsigned addr, counter_t *miss_counter)
 
 		else
 		{
+			{
+				if ((c->m_tag_array[index + i + 1].m_valid
+						&& (c->m_tag_array[index + i + 1].m_tag == tag)))
+				{
+					(&(c->m_tag_array[index + i + 1]))->m_timestamp = sim_num_insn;
+					break;
+				}
+			}
 			if ((&(c->m_tag_array[index + i]))->m_timestamp < min)
 			{
 				k = i;
